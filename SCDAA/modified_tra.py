@@ -5,6 +5,10 @@ import matplotlib.pyplot as plt
 from lqr_problem import LQRProblem
 from soft_lqr_problem import SoftLQRProblem
 
+# Fix random seeds for reproducibility
+np.random.seed(123)
+torch.manual_seed(123)
+
 # Define the problem parameters (using Figure 1 values)
 H = torch.tensor([[0.5, 0.5],[0.0, 0.5]])
 M = torch.tensor([[1.0, 1.0],[0.0, 1.0]])
@@ -58,7 +62,7 @@ def simulate_trajectories(controller, init_states, brownian_increments):
 strict_trajectories = simulate_trajectories(strict_lqr, init_states, brownian_increments)
 soft_trajectories = simulate_trajectories(soft_lqr, init_states, brownian_increments)
 
-# Print trajectory data (add this section)
+# Print trajectory data
 print("\n=== Strict LQR Trajectories Data ===")
 for i, (traj, init_state) in enumerate(zip(strict_trajectories, init_states)):
     print(f"\nTrajectory {i+1} (Initial state: {init_state})")
@@ -74,7 +78,6 @@ for i, (traj, init_state) in enumerate(zip(soft_trajectories, init_states)):
     for n in range(len(traj)):
         t = n * dt
         print(f"{t:.3f}      {traj[n][0]:<15.4f} {traj[n][1]:<15.4f}")
-
 
 # Plot trajectories for strict LQR
 plt.figure(figsize=(8, 6))

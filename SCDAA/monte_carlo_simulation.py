@@ -63,7 +63,7 @@ plt.show()
 # --- Convergence test (2): Vary number of Monte Carlo samples ---
 errors_M = []
 M_list = []
-N_fixed = 10000  # use a fine time discretization
+N_fixed = 100  # use a fine time discretization
 for m_exp in range(0, 6):
     M_s = 2*4**m_exp
     est = estimate_value(lqr, x0, N_fixed, M_s)
