@@ -64,8 +64,8 @@ plt.show()
 errors_M = []
 M_list = []
 N_fixed = 10000  # use a fine time discretization
-for m_exp in range(10, 16):
-    M_s = 2**m_exp
+for m_exp in range(0, 6):
+    M_s = 2*4**m_exp
     est = estimate_value(lqr, x0, N_fixed, M_s)
     true_val = lqr.value(torch.tensor([0.0]), torch.tensor([x0]))[0].item()
     error = abs(est - true_val)
