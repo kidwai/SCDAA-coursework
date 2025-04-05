@@ -4,9 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from soft_lqr_problem import SoftLQRProblem
 
-##############################################################################
 # 1) Environment & Setup
-##############################################################################
 H = torch.tensor([[0.5, 0.5],
                   [0.0, 0.5]], dtype=torch.float32)
 M = torch.tensor([[1.0, 1.0],
@@ -27,10 +25,7 @@ env = SoftLQRProblem(H, M, C, D, R, T, time_grid, tau, gamma)
 env.set_noise(torch.eye(2)*0.5)
 env.solve_riccati()  # So env.value() uses the correct (S(t), b(t)) from the modified Riccati eqn
 
-##############################################################################
 # 2) Policy Network
-##############################################################################
-# We'll parametrize a Gaussian policy with mean = ActorNet(t,x) and fixed covariance = tau * I.
 
 class ActorNet(nn.Module):
     def __init__(self, hidden_dim=64):
@@ -56,24 +51,11 @@ class ActorNet(nn.Module):
         return mean_action
 
 
-##############################################################################
+
 # 3) Function to Evaluate the Policy
-##############################################################################
+
 def evaluate_policy(actor, env, N_sim=100, n_rollouts=5):
-    """
-    Evaluate how close the policy is to the known optimal solution.
-    We'll compare the total cost of the rollout vs. the 'optimal' cost.
 
-    Args:
-      actor:      trained ActorNet
-      env:        SoftLQRProblem with env.value(...) known
-      N_sim:      # of steps per simulated trajectory
-      n_rollouts: how many independent rollouts to average over
-
-    Returns:
-      avg_rel_cost_diff: the average difference from the optimal cost as fraction
-                         or some measure of absolute difference
-    """
     dt = env.T / N_sim
     costs_diffs = []
 
@@ -85,14 +67,7 @@ def evaluate_policy(actor, env, N_sim=100, n_rollouts=5):
         # We'll track total cost from rolling out the learned policy
         rollout_cost = 0.0
 
-        # We'll also track the "optimal" cost for that same (t, x) as if we did nothing right away,
-        # i.e. v_opt(0, x). That’s what we compare to.
-        # Actually, let's define exact_opt_cost = env.value(t, x)[0].item()  # but note we sum costs over time
 
-        # We'll do the partial sums approach:
-        # cost_0 = env.value(t, x). The difference between integrated cost and the
-        # "value function difference" should match the integral cost. We'll do a direct integral approach.
-        cost_init = env.value(torch.tensor([t]), torch.tensor([x], dtype=torch.float32))[0].item()
 
         for _ in range(N_sim):
             # Convert to torch
@@ -118,16 +93,12 @@ def evaluate_policy(actor, env, N_sim=100, n_rollouts=5):
             x = x_next
             t += dt
 
-        # Compare to the "optimal" cost we *would have had* starting from same initial (0, x):
-        # That is env.value(0, x) if we interpret cost from t=0 to T. But we must define
-        # "exact_opt_cost" = v(0, x).
+
         # Then difference = rollout_cost - exact_opt_cost
         exact_opt_cost = env.value(torch.zeros(1), 
                                    torch.tensor([x_tensor[0].numpy()], dtype=torch.float32))[0].item()
 
-        # The difference "rollout_cost - (v_opt(0,x))" might be a measure of how close
-        # we are to the optimum. Because (v_opt(0,x)) is the minimal possible cost from 0 to T,
-        # if our policy was truly optimal, we'd get ~ the same cost. Usually you expect
+
         # rollout_cost >= v_opt(0, x).
         cost_diff = rollout_cost - exact_opt_cost
         costs_diffs.append(cost_diff)
@@ -136,9 +107,7 @@ def evaluate_policy(actor, env, N_sim=100, n_rollouts=5):
     return avg_cost_diff
 
 
-##############################################################################
 # 4) Actor-Only Training with Verification
-##############################################################################
 def train_actor_only(
     num_epochs=50,
     N_sim=100,

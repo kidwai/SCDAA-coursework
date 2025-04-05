@@ -4,9 +4,7 @@ import torch.nn as nn
 import torch.optim as optim
 from soft_lqr_problem import SoftLQRProblem
 
-##############################################################################
 # 1) Environment Setup (same as Exercise 2 for the "soft LQR" problem)
-##############################################################################
 H = torch.tensor([[0.5, 0.5],
                   [0.0, 0.5]], dtype=torch.float32)
 M = torch.tensor([[1.0, 1.0],
@@ -25,13 +23,9 @@ gamma = 10.0
 
 env = SoftLQRProblem(H, M, C, D, R, T, time_grid, tau, gamma)
 env.set_noise(torch.eye(2)*0.5)
-env.solve_riccati()  # So "env.optimal_action(...)" and "env.optimal_action_mean(...)" are valid
+env.solve_riccati()  
 
-##############################################################################
 # 2) Critic Network: Approximating the Value Function v(t, x; eta)
-##############################################################################
-# For simplicity, we pass (t, x1, x2) -> a single scalar output ~ v_eta(t,x).
-# We'll do a small feed-forward NN.
 
 class CriticNet(nn.Module):
     def __init__(self, hidden_dim=64):
@@ -54,11 +48,8 @@ class CriticNet(nn.Module):
         v = self.out(h)  # shape: (batch_size,1)
         return v.view(-1)  # flatten to (batch_size,)
 
-##############################################################################
 # 3) Critic-Only Algorithm
-##############################################################################
-# We'll fix the "optimal" soft LQR policy from ex.2 (env.optimal_action(...) sampling).
-# Then we just run episodes, record trajectories, and do a regression for v(t,x;eta).
+
 
 def train_critic_only(
     num_episodes=50,
@@ -90,11 +81,6 @@ def train_critic_only(
         state_list = []
         returns_list = []
 
-        # We'll build a path with N_sim steps
-        # Then for each n, the "MC return" from times n->N is
-        # sum of (cost_n + tau ln p(...)) * dt from n->(N-1) plus terminal cost g(XT).
-        # We'll store partial sums from the end.
-
         # Accumulate trajectory
         t = t0
         x = x0
@@ -112,16 +98,7 @@ def train_critic_only(
 
             # Compute cost_n, including entropic reg
             cost_n = x @ (env.C @ x) + a_np @ (env.D @ a_np)
-            # Also the "tau ln p(...)" is included in env's definition of optimal policy,
-            # but we want to add that explicitly if we're replicate the total objective:
-            #   cost_n + tau ln pi(a|t,x). However, the environment's "optimal_action"
-            #   already accounts for that in the policy. So let's see if we need that:
-            # Usually in the document, it's cost + tau ln p. Let's do it:
-            # Because policy is N(mean, tau D_eff_inv),
-            #  ln p ~ ln( 1/sqrt(det(2 pi Sigma)) ) - 0.5 (a-mean)^T Sigma^{-1} (a-mean)
-            # But since it's a constant band of code, let's *approximate* it:
-            # We'll skip adding "tau ln p" here for clarity, or do it if we want:
-            # We'll keep it simpler: cost_n + 0 ???
+
 
             # store cost
             cost_history.append(cost_n)
@@ -138,7 +115,6 @@ def train_critic_only(
         x_final = state_history[-1][1]
         final_cost = x_final @ (env.R @ x_final)  # g(x) = x^T R x
 
-        # Now build the partial sums from the end for MC returns:
         # Return_n = sum_{k=n}^{N-1} cost_history[k]*dt + final_cost
         returns = []
         running_sum = final_cost
@@ -148,10 +124,7 @@ def train_critic_only(
             returns.append(running_sum)
         returns.reverse()
 
-        # Now fill time_list, state_list, returns_list
-        # We have N_sim steps => each step => (t_i, x_i, Return_i)
-        # The indexing in state_history: length is N_sim+1
-        # We'll store for n in [0..N_sim], but the last is a dummy for N...
+
         for i in range(N_sim):
             (tn, xn) = state_history[i]
             time_list.append(tn)
