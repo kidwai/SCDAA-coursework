@@ -1,8 +1,8 @@
 # SCDAA-coursework
 
 Students:
-Chuzhou Shao s2645700
-Muhammad Kidwai 
+Chuzhou Shao s2645700;
+Muhammad Kidwai s2767976;
 Hanzhe Zhang s2668462
 
 Everyone contributed equally.
